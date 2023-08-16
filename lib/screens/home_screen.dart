@@ -25,6 +25,7 @@ class _MyHomePageState extends State<MyHomePage> {
   File? selectedFile;
   String qrImage = '';
   String id = '';
+  bool isFileSendingInProgress = false;
   bool isFileUrlFetchingInProgress = false;
   bool isFileDownloadingInProgress = false;
   double downloadComplete = 0.0;
@@ -70,14 +71,19 @@ class _MyHomePageState extends State<MyHomePage> {
                     minimumSize: const Size.fromHeight(50),
                   ),
                   onPressed: (isFileDownloadingInProgress ||
-                              isFileUrlFetchingInProgress) ==
+                              isFileUrlFetchingInProgress ||
+                              isFileSendingInProgress) ==
                           true
                       ? null
                       : () {
                           sendFile();
                         },
                   icon: const Icon(Icons.file_upload_sharp),
-                  label: const Text('Send File'),
+                  label: Visibility(
+                    visible: isFileSendingInProgress == false,
+                    replacement: const CircularProgressIndicator(),
+                    child: const Text('Send File'),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 if (qrImage.isNotEmpty) ...<Widget>[
@@ -100,39 +106,54 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
                 if (isFileDownloadingInProgress == true)
-                  Slider(
-                    min: 0.0,
-                    max: 100.0,
-                    value: downloadComplete,
-                    onChanged: (value) {
-                      // log(value.toString());
-                      // setState(() {});
-                    },
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Slider(
+                          label: '${downloadComplete.toStringAsFixed(0)}%',
+                          divisions: 100,
+                          min: 0.0,
+                          max: 100.0,
+                          value: downloadComplete,
+                          onChanged: (value) {
+                            // log(value.toString());
+                            // setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Chip(
+                        label: Text('${downloadComplete.toStringAsFixed(0)}%'),
+                      ),
+                    ],
                   ),
-                TextField(
-                  controller: codeController,
-                  decoration: InputDecoration(
-                    labelText: 'Enter PIN',
-                    suffix: IconButton(
-                      onPressed: (isFileDownloadingInProgress ||
-                                  isFileUrlFetchingInProgress) ==
-                              true
-                          ? null
-                          : () async {
-                              if (codeController.text.trim().isNotEmpty) {
-                                await downloadFile(codeController.text.trim());
-                              }
-                            },
-                      icon: (isFileDownloadingInProgress ||
-                                  isFileUrlFetchingInProgress) ==
-                              true
-                          ? const CircularProgressIndicator()
-                          : const Icon(Icons.download),
+                if (isFileSendingInProgress == false)
+                  TextField(
+                    controller: codeController,
+                    decoration: InputDecoration(
+                      labelText: 'Enter PIN',
+                      suffix: IconButton(
+                        onPressed: (isFileDownloadingInProgress ||
+                                    isFileUrlFetchingInProgress) ==
+                                true
+                            ? null
+                            : () async {
+                                if (codeController.text.trim().isNotEmpty) {
+                                  await downloadFile(
+                                      codeController.text.trim());
+                                }
+                              },
+                        icon: (isFileDownloadingInProgress ||
+                                    isFileUrlFetchingInProgress) ==
+                                true
+                            ? const CircularProgressIndicator()
+                            : const Icon(Icons.download),
+                      ),
                     ),
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
                   ),
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                ),
               ],
             ),
           ),
@@ -149,7 +170,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (result != null) {
       selectedFileName = result.files[0].name;
       setState(() {});
-      log(result.paths[0].toString());
+      // log(result.paths[0].toString());
       selectedFile = File(result.files[0].path!);
       return true;
     }
@@ -159,11 +180,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> sendFile() async {
     if (selectedFile == null) {
       if (mounted) {
+        ScaffoldMessenger.maybeOf(context)!.clearSnackBars();
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('No File Selected!')));
       }
       return;
     } else {
+      isFileSendingInProgress = true;
+      if (mounted) {
+        setState(() {});
+      }
       try {
         FormData formData = FormData.fromMap({
           "file": await MultipartFile.fromFile(
@@ -175,19 +201,26 @@ class _MyHomePageState extends State<MyHomePage> {
           '$baseUrl/file-share-bd-api/',
           data: formData,
         );
-
         if (response.statusCode == 202) {
           Map<String, dynamic> responseData = response.data;
           id = '${responseData['id']}';
           qrImage = responseData['qrImage'];
+          selectedFile = null;
+          selectedFileName = '';
           setState(() {});
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('File Upload Successfull.')));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              backgroundColor: Colors.green,
+              content: Text('File upload complete.'),
+            ));
           }
         }
       } catch (e) {
-        throw (e.toString());
+        (e.toString());
+      }
+      isFileSendingInProgress = false;
+      if (mounted) {
+        setState(() {});
       }
     }
   }
@@ -209,12 +242,44 @@ class _MyHomePageState extends State<MyHomePage> {
       if (mounted) {
         setState(() {});
       }
-      log(response.data.toString());
+      // log(response.data.toString());
       if (response.statusCode == 200) {
         return response.data;
       }
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.badResponse) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color.fromARGB(255, 233, 27, 12),
+              content: Text('File not found or PIN has expired or wrong.'),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color.fromARGB(255, 228, 23, 9),
+              content: Text('Something is wrong!'),
+            ),
+          );
+        }
+      }
     } catch (e) {
-      log(e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color.fromARGB(255, 236, 22, 7),
+            content: Text('Server error!'),
+          ),
+        );
+      }
+    }
+
+    isFileUrlFetchingInProgress = false;
+    if (mounted) {
+      setState(() {});
     }
     return null;
   }
@@ -223,10 +288,6 @@ class _MyHomePageState extends State<MyHomePage> {
     final File appDownloadPath = File('/storage/emulated/0/Download/');
     final Map<String, dynamic>? responseData = await getFileUrl(pinCode);
     if (responseData == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('File url not found!')));
-      }
       return;
     }
     isFileDownloadingInProgress = true;
@@ -238,29 +299,36 @@ class _MyHomePageState extends State<MyHomePage> {
         '$baseUrl${responseData['file']}',
         "${appDownloadPath.path}/${responseData['file'].split('/').last}",
         onReceiveProgress: (rec, total) {
-          log('--------------------');
-          log('Total: $total');
+          // log('--------------------');
+          // log('Total: $total');
           downloadComplete = (rec / total) * 100.0;
-          log('Complete: $downloadComplete');
-          log('--------------------');
+          // log('Complete: $downloadComplete');
+          // log('--------------------');
           setState(() {});
         },
       );
     } catch (e) {
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('File Download Failed!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('File Download Failed!'),
+        ));
       }
-      log(e.toString());
+      isFileDownloadingInProgress = false;
+      if (mounted) {
+        setState(() {});
+      }
       return;
     }
     clearAll();
     isFileDownloadingInProgress = false;
     if (mounted) {
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File Download Complete.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: Colors.green,
+        content: Text('File download Complete.'),
+      ));
     }
   }
 
