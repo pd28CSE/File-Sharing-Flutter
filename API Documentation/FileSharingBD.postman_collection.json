@@ -1,0 +1,120 @@
+{
+	"info": {
+		"_postman_id": "37100fd7-36b4-430f-ba05-41177f8778e7",
+		"name": "FileSharingBD",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16365646",
+		"_collection_link": "https://lunar-star-875150.postman.co/workspace/Team-Workspace~535ce1bb-50af-4686-88da-f2acf7fd88cd/collection/16365646-37100fd7-36b4-430f-ba05-41177f8778e7?action=share&source=collection_link&creator=16365646"
+	},
+	"item": [
+		{
+			"name": "upload file",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/C:/Users/parth/OneDrive/Desktop/rnn.txt"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/file-share-bd-api/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"file-share-bd-api",
+						""
+					],
+					"query": [
+						{
+							"key": "",
+							"value": null,
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get file link",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "id",
+							"value": "890843",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/file-share-bd-api/serve-file/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"file-share-bd-api",
+						"serve-file",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "download file",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/media/890843.txt",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"media",
+						"890843.txt"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://filesharingbd.pythonanywhere.com",
+			"type": "string"
+		}
+	]
+}
