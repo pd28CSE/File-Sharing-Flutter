@@ -18,7 +18,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final String baseUrl = 'http://10.0.2.2:8000';
+  final String baseUrl = 'https://filesharingbd.pythonanywhere.com';
   final Dio dio = Dio();
   late final TextEditingController codeController;
   String selectedFileName = '';
@@ -242,7 +242,7 @@ class _MyHomePageState extends State<MyHomePage> {
       if (mounted) {
         setState(() {});
       }
-      // log(response.data.toString());
+      log(response.data.toString());
       if (response.statusCode == 200) {
         return response.data;
       }
@@ -296,7 +296,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     try {
       await dio.download(
-        '$baseUrl${responseData['file']}',
+        '$baseUrl/${responseData['file']}',
         "${appDownloadPath.path}/${responseData['file'].split('/').last}",
         onReceiveProgress: (rec, total) {
           // log('--------------------');
@@ -308,6 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
         },
       );
     } catch (e) {
+      log(e.toString());
       if (mounted) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
